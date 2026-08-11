@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParkFrame — 영상편집자 박민서 | 혼자 컷 뽑고 마감까지 갑니다</title>
+<meta name="description" content="영상편집자 박민서. 게임·애니메이션 / 모션그래픽 영상편집 지원. 20분 안전교육 영상 기한 내 납품, VR 편집 1주일 습득 등 실무 케이스 3건.">
+<!-- 연락처 등 개인정보가 포함된 페이지 — 검색엔진 색인 제외 (링크를 받은 채용담당자만 열람) -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23FF9E2C' stroke-width='6' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M16 8 V56'/%3E%3Cpath d='M16 8 H40 V26 H16'/%3E%3Cpath d='M16 34 H44'/%3E%3Cpath d='M16 46 H36'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://i.ytimg.com">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script>document.documentElement.className += ' js';</script>
+<style>
+  :root{
+    /* NLE(Premiere/AE) 타임라인 다크 UI에서 가져온 팔레트 — 색 자체가 직군 코드 */
+    --bg:#0B0C0E;
+    --panel:#131519;
+    --panel-2:#191C21;
+    --line:rgba(255,255,255,0.10);
+    --line-2:rgba(255,255,255,0.18);
+    --ink:#F2F3F5;
+    --muted:#9AA0A8;
+    --dim:#6B7078;
+    --amber:#FF9E2C;      /* 타임라인 워크에어리어 */
+    --render:#3DDC97;     /* 렌더 완료 바 */
+    --font:'Pretendard', -apple-system, sans-serif;
+    --mono:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    font-family:var(--font); background:var(--bg); color:var(--ink);
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  }
+  a{ color:inherit; text-decoration:none; }
+  img{ max-width:100%; display:block; }
+  ::selection{ background:var(--amber); color:#0B0C0E; }
+  :focus-visible{ outline:2px solid var(--amber); outline-offset:3px; border-radius:4px; }
+
+  .wrap{ max-width:1120px; margin:0 auto; padding:0 24px; }
+  section{ position:relative; }
+  .pad{ padding:112px 0; }
+  @media (max-width:700px){ .pad{ padding:76px 0; } }
+
+  /* JS가 실행될 때만 숨긴다 — 스크립트가 막혀도 페이지가 백지가 되지 않도록 */
+  .js .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+  .js .reveal.in{ opacity:1; transform:none; }
+
+  /* ---------- 플레이헤드 : 스크롤 진행 = 시퀀스 재생 ---------- */
+  .playhead{
+    position:fixed; top:0; left:0; height:2px; width:0%;
+    background:var(--amber); z-index:60; transition:width .1s linear;
+  }
+  .playhead::after{
+    content:''; position:absolute; right:-1px; top:0; width:2px; height:10px; background:var(--amber);
+  }
+
+  /* ---------- nav ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 24px;
+    background:rgba(11,12,14,.78);
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--line);
+  }
+  .logo{ display:flex; align-items:center; gap:9px; font-weight:700; font-size:.95rem; letter-spacing:-.01em; }
+  .logo svg{ width:17px; height:17px; color:var(--amber); }
+  .logo em{ font-style:normal; color:var(--amber); }
+  nav{ display:flex; gap:24px; font-size:.82rem; color:var(--muted); font-family:var(--mono); }
+  nav a:hover{ color:var(--ink); }
+  .nav-cta{
+    font-size:.8rem; font-weight:700; padding:8px 16px; border-radius:6px;
+    background:var(--amber); color:#0B0C0E;
+  }
+  @media (max-width:820px){ nav{ display:none; } }
+
+  /* ---------- labels ---------- */
+  .seq{
+    font-family:var(--mono); font-size:.72rem; letter-spacing:.12em;
+    color:var(--amber); display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  }
+  .seq::after{ content:''; height:1px; flex:1; background:linear-gradient(90deg,var(--line-2),transparent); }
+  h2{ font-size:clamp(1.6rem,3.6vw,2.35rem); font-weight:800; letter-spacing:-.025em; line-height:1.2; }
+  .sec-desc{ margin-top:12px; color:var(--muted); font-size:.98rem; line-height:1.7; max-width:600px; }
+
+  /* ---------- hero ---------- */
+  .hero{ padding:132px 0 84px; border-bottom:1px solid var(--line); }
+  .hero-grid{ display:grid; grid-template-columns:1fr 1.05fr; gap:52px; align-items:center; }
+  @media (max-width:940px){ .hero-grid{ grid-template-columns:1fr; gap:36px; } }
+  .tape{
+    display:inline-flex; align-items:center; gap:8px; font-family:var(--mono);
+    font-size:.72rem; letter-spacing:.06em; color:var(--render);
+    border:1px solid rgba(61,220,151,.3); background:rgba(61,220,151,.08);
+    padding:6px 12px; border-radius:5px; margin-bottom:22px;
+  }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--render); }
+  h1{
+    font-size:clamp(2.2rem,5.4vw,3.5rem); font-weight:800;
+    line-height:1.14; letter-spacing:-.035em;
+  }
+  h1 span{ color:var(--amber); }
+  .hero-sub{ margin-top:22px; color:var(--muted); font-size:1.02rem; line-height:1.75; max-width:480px; }
+  .hero-sub b{ color:var(--ink); font-weight:600; }
+  .hero-cta{ margin-top:32px; display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:13px 22px; border-radius:8px; font-size:.92rem; font-weight:700;
+    transition:transform .2s ease, background .2s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn-fill{ background:var(--amber); color:#0B0C0E; }
+  .btn-line{ border:1px solid var(--line-2); color:var(--ink); }
+  .btn-line:hover{ background:var(--panel-2); }
+  .btn svg{ width:15px; height:15px; }
+
+  /* ---------- video facade ---------- */
+  .player{
+    position:relative; width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden;
+    background:#000; border:1px solid var(--line-2);
+    box-shadow:0 24px 70px rgba(0,0,0,.6);
+  }
+  .player.v{ aspect-ratio:9/16; max-width:280px; }
+  .facade{
+    position:absolute; inset:0; width:100%; height:100%; border:0; padding:0;
+    cursor:pointer; background:#000; display:block;
+  }
+  .facade img{ width:100%; height:100%; object-fit:cover; opacity:.82; transition:opacity .3s ease, transform .5s ease; }
+  .facade:hover img{ opacity:1; transform:scale(1.03); }
+  .facade .play{
+    position:absolute; inset:0; margin:auto; width:64px; height:64px; border-radius:50%;
+    background:rgba(255,158,44,.94); display:flex; align-items:center; justify-content:center;
+    transition:transform .25s ease;
+  }
+  .facade:hover .play{ transform:scale(1.08); }
+  .facade .play::before{
+    content:''; border-left:17px solid #0B0C0E;
+    border-top:11px solid transparent; border-bottom:11px solid transparent; margin-left:5px;
+  }
+  .facade .cap{
+    position:absolute; left:0; right:0; bottom:0; padding:14px 16px;
+    background:linear-gradient(transparent, rgba(0,0,0,.86));
+    font-family:var(--mono); font-size:.72rem; color:#fff; text-align:left; letter-spacing:.04em;
+  }
+  .player iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  /* 공개 링크가 없는 프로젝트용 플레이스홀더 */
+  .nomedia{
+    width:100%; aspect-ratio:16/9; border-radius:12px; background:var(--panel-2);
+    border:1px dashed var(--line-2); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:26px; gap:9px;
+  }
+  .nomedia .t{ font-family:var(--mono); font-size:.74rem; letter-spacing:.08em; color:var(--dim); }
+  .nomedia .d{ font-size:.85rem; color:var(--muted); line-height:1.7; max-width:280px; }
+  .nomedia a{ color:var(--amber); font-weight:700; }
+
+  /* ---------- 실측 지표 ---------- */
+  .metrics{
+    margin-top:44px; display:grid; grid-template-columns:repeat(4,1fr);
+    border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--panel);
+  }
+  @media (max-width:700px){ .metrics{ grid-template-columns:repeat(2,1fr); } }
+  .metric{ padding:20px 18px; border-right:1px solid var(--line); }
+  .metric:last-child{ border-right:0; }
+  @media (max-width:700px){
+    .metric:nth-child(2n){ border-right:0; }
+    .metric:nth-child(-n+2){ border-bottom:1px solid var(--line); }
+  }
+  .metric strong{ display:block; font-size:1.5rem; font-weight:800; letter-spacing:-.02em; }
+  .metric span{ display:block; margin-top:5px; font-size:.76rem; color:var(--dim); font-family:var(--mono); }
+
+  /* ---------- 포지셔닝 3줄 ---------- */
+  .pos-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:8px; }
+  @media (max-width:820px){ .pos-grid{ grid-template-columns:1fr; } }
+  .pos{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 24px;
+    border-top:2px solid var(--amber);
+  }
+  .pos h3{ font-size:1.05rem; font-weight:700; margin-bottom:10px; letter-spacing:-.01em; }
+  .pos p{ color:var(--muted); font-size:.9rem; line-height:1.75; }
+
+  /* ---------- case study ---------- */
+  .case{ border-top:1px solid var(--line); padding-top:44px; margin-top:56px; }
+  .case:first-of-type{ border-top:0; margin-top:0; padding-top:0; }
+  .case-top{ display:grid; grid-template-columns:1.1fr 1fr; gap:44px; align-items:start; }
+  @media (max-width:940px){ .case-top{ grid-template-columns:1fr; gap:26px; } }
+  .case-id{ font-family:var(--mono); font-size:.74rem; color:var(--amber); letter-spacing:.1em; margin-bottom:10px; }
+  .case-title{ font-size:clamp(1.35rem,2.6vw,1.8rem); font-weight:800; letter-spacing:-.025em; line-height:1.28; }
+  .case-role{
+    margin-top:14px; display:flex; gap:7px; flex-wrap:wrap;
+  }
+  .chip{
+    font-family:var(--mono); font-size:.7rem; color:var(--muted);
+    border:1px solid var(--line); border-radius:5px; padding:5px 10px;
+  }
+  .chip.hot{ color:var(--amber); border-color:rgba(255,158,44,.35); background:rgba(255,158,44,.07); }
+
+  .bpdr{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; margin-top:32px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  @media (max-width:940px){ .bpdr{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .bpdr{ grid-template-columns:1fr; } }
+  .step{ background:var(--panel); padding:22px 20px; }
+  .step .k{
+    font-family:var(--mono); font-size:.68rem; letter-spacing:.1em; color:var(--dim); margin-bottom:10px;
+    display:flex; align-items:center; gap:7px;
+  }
+  .step .k i{ width:5px; height:5px; border-radius:50%; background:var(--dim); font-style:normal; }
+  .step.r{ background:var(--panel-2); }
+  .step.r .k{ color:var(--render); }
+  .step.r .k i{ background:var(--render); }
+  .step p{ font-size:.89rem; line-height:1.75; color:var(--muted); }
+  .step p b{ color:var(--ink); font-weight:600; }
+  .step ul{ list-style:none; }
+  .step li{ font-size:.87rem; line-height:1.7; color:var(--muted); padding-left:13px; position:relative; margin-bottom:7px; }
+  .step li:last-child{ margin-bottom:0; }
+  .step li::before{ content:''; position:absolute; left:0; top:9px; width:4px; height:4px; border-radius:50%; background:var(--dim); }
+
+  /* ---------- skills ---------- */
+  .skill-row{ display:grid; grid-template-columns:150px 1fr; gap:24px; padding:24px 0; border-bottom:1px solid var(--line); align-items:start; }
+  .skill-row:first-of-type{ border-top:1px solid var(--line); }
+  @media (max-width:700px){ .skill-row{ grid-template-columns:1fr; gap:12px; } }
+  .skill-tier{ font-family:var(--mono); font-size:.74rem; letter-spacing:.08em; color:var(--amber); padding-top:3px; }
+  .skill-tier.b{ color:var(--muted); }
+  .skill-tier.c{ color:var(--dim); }
+  .skill-items{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .tool{ font-size:.85rem; font-weight:600; border:1px solid var(--line-2); border-radius:6px; padding:7px 13px; }
+  .skill-use{ font-size:.88rem; color:var(--muted); line-height:1.7; }
+
+  /* ---------- timeline ---------- */
+  .tl{ position:relative; padding-left:26px; max-width:720px; }
+  .tl::before{ content:''; position:absolute; left:4px; top:8px; bottom:8px; width:1px; background:var(--line-2); }
+  .tl-item{ position:relative; padding-bottom:34px; }
+  .tl-item:last-child{ padding-bottom:0; }
+  .tl-item::before{
+    content:''; position:absolute; left:-26px; top:6px; width:9px; height:9px; border-radius:50%;
+    background:var(--amber); box-shadow:0 0 0 3px var(--bg);
+  }
+  .tl-item.gap::before{ background:var(--dim); }
+  .tl-item.now::before{ background:var(--render); box-shadow:0 0 0 3px var(--bg), 0 0 12px var(--render); }
+  .tl-date{ font-family:var(--mono); font-size:.75rem; color:var(--dim); margin-bottom:5px; letter-spacing:.03em; }
+  .tl-title{ font-size:1.02rem; font-weight:700; margin-bottom:5px; letter-spacing:-.01em; }
+  .tl-title small{ font-weight:500; color:var(--muted); font-size:.82rem; margin-left:7px; }
+  .tl-desc{ font-size:.88rem; color:var(--muted); line-height:1.75; }
+  .tl-item.gap .tl-title{ color:var(--muted); font-weight:600; }
+
+  /* ---------- honesty ---------- */
+  .honest{
+    background:var(--panel); border:1px solid var(--line); border-left:2px solid var(--amber);
+    border-radius:12px; padding:34px 32px;
+  }
+  @media (max-width:600px){ .honest{ padding:26px 22px; } }
+  .honest-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border-radius:8px; overflow:hidden; margin-top:24px; }
+  @media (max-width:760px){ .honest-grid{ grid-template-columns:1fr; } }
+  .honest-cell{ background:var(--panel-2); padding:20px 18px; }
+  .honest-cell .k{ font-family:var(--mono); font-size:.68rem; letter-spacing:.1em; color:var(--dim); margin-bottom:9px; }
+  .honest-cell p{ font-size:.88rem; line-height:1.7; }
+  .honest-cell.fix .k{ color:var(--render); }
+
+  /* ---------- gallery ---------- */
+  .gal{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:700px){ .gal{ grid-template-columns:1fr; } }
+  .gal-title{ margin-top:12px; font-size:.95rem; font-weight:700; }
+  .gal-desc{ margin-top:5px; font-size:.83rem; color:var(--muted); line-height:1.65; }
+
+  /* ---------- facts ---------- */
+  .facts{ display:grid; grid-template-columns:1fr 1fr; gap:40px; }
+  @media (max-width:760px){ .facts{ grid-template-columns:1fr; gap:28px; } }
+  .fact-label{ font-family:var(--mono); font-size:.72rem; letter-spacing:.1em; color:var(--amber); margin-bottom:14px; }
+  .fact-list{ list-style:none; }
+  .fact-list li{ display:flex; justify-content:space-between; gap:14px; padding:13px 0; border-bottom:1px solid var(--line); font-size:.9rem; }
+  .fact-list li:first-child{ border-top:1px solid var(--line); }
+  .fact-list .n{ font-weight:600; }
+  .fact-list .m{ color:var(--dim); font-size:.8rem; font-family:var(--mono); text-align:right; white-space:nowrap; }
+
+  /* ---------- contact ---------- */
+  .contact{ border-top:1px solid var(--line); background:var(--panel); }
+  .contact-inner{ text-align:center; max-width:680px; margin:0 auto; }
+  .contact h2{ font-size:clamp(1.7rem,4vw,2.6rem); }
+  .contact p{ margin-top:16px; color:var(--muted); font-size:1rem; line-height:1.75; }
+  .contact-cta{ margin-top:34px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .social{ margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .social a{
+    display:flex; align-items:center; gap:7px; font-size:.8rem; font-weight:600; color:var(--muted);
+    border:1px solid var(--line); border-radius:7px; padding:9px 15px; transition:color .2s, border-color .2s;
+  }
+  .social a:hover{ color:var(--ink); border-color:var(--line-2); }
+  .social svg{ width:14px; height:14px; }
+  footer{
+    border-top:1px solid var(--line); padding:22px 0;
+    display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:.72rem; color:var(--dim);
+  }
+</style>
+</head>
+<body>
+
+<div class="playhead" id="playhead" aria-hidden="true"></div>
+
+<header>
+  <a class="logo" href="#top">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter">
+        <path d="M16 8 V56"/><path d="M16 8 H40 V26 H16"/><path d="M16 34 H44"/><path d="M16 46 H36"/>
+      </g>
+    </svg>
+    <span>Park<em>Frame</em></span>
+  </a>
+  <nav>
+    <a href="#work">WORK</a>
+    <a href="#skill">SKILL</a>
+    <a href="#career">CAREER</a>
+    <a href="#honest">HONEST</a>
+  </nav>
+  <a class="nav-cta" href="#contact">면접 요청하기</a>
+</header>
+
+<!-- ============ SEQ 00 · HERO ============ -->
+<section class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="tape reveal"><span class="dot"></span>즉시 투입 가능 · 정규직 / 프리랜서 / 인턴</div>
+      <h1 class="reveal">혼자 컷 뽑고,<br><span>마감까지</span> 갑니다.</h1>
+      <p class="hero-sub reveal">
+        영상편집자 박민서입니다. <b>게임·애니메이션 / 모션그래픽</b> 영상편집 직무에 지원합니다.
+        사수 없이 VR 콘텐츠를 맡아 1주일 만에 1차본을 냈고, 20분짜리 안전교육 영상을
+        렌더링 사고까지 뚫고 <b>기한 내 납품</b>했습니다.
+      </p>
+      <div class="hero-cta reveal">
+        <a class="btn btn-fill" href="#work">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          작업 케이스 보기
+        </a>
+        <!-- ↓ 이력서 PDF를 이 HTML과 같은 폴더에 넣으면 바로 동작합니다 -->
+        <a class="btn btn-line" href="박민서_이력서.pdf" download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+          이력서 PDF
+        </a>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <!-- 임시 대표 릴: 실제 60초 쇼릴 제작 후 data-id 교체 권장 -->
+      <div class="player">
+        <button class="facade" data-id="gFPZGNdLp6A" aria-label="대표 릴 영상 재생">
+          <img src="https://i.ytimg.com/vi/gFPZGNdLp6A/hqdefault.jpg" alt="모션그래픽 광고 스타일 작업 썸네일" loading="eager" width="480" height="360">
+          <span class="play" aria-hidden="true"></span>
+          <span class="cap">REEL · 아이폰 17 Pro 광고 콘셉트 (개인 작업) · After Effects + Cinema 4D</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="metrics reveal">
+      <div class="metric"><strong>3년 5개월</strong><span>영상 커리어 (2023.03~)</span></div>
+      <div class="metric"><strong>7개월</strong><span>회사 실무 (코스믹블랙)</span></div>
+      <div class="metric"><strong>20분</strong><span>단독 책임 최장 납품물</span></div>
+      <div class="metric"><strong>3개</strong><span>전문 교육과정 이수</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEQ 01 · POSITION ============ -->
+<section class="pad">
+  <div class="wrap">
+    <div class="seq reveal">SEQ 01 — POSITION</div>
+    <h2 class="reveal">경력은 짧습니다.<br>대신 맡기면 끝까지 갑니다.</h2>
+    <p class="sec-desc reveal" style="margin-bottom:36px;">
+      주니어를 뽑을 때 가장 궁금한 세 가지에 먼저 답하겠습니다.
+    </p>
+    <div class="pos-grid">
+      <div class="pos reveal">
+        <h3>사수가 필요한가요?</h3>
+        <p>첫 회사 입사 첫날, 사수 없이 VR 편집을 배정받았습니다. 커뮤니티·유튜브로 워크플로를 독학해
+          <b style="color:var(--ink)">1주일 만에 1차본</b>을 냈고, 한 달 뒤 신규 인턴을 이끄는 역할을 맡았습니다.</p>
+      </div>
+      <div class="pos reveal">
+        <h3>납기는 지키나요?</h3>
+        <p>포스코 안전교육 영상 작업 중 렌더링 실패가 났습니다. 오류 로그를 뒤져
+          <b style="color:var(--ink)">플러그인 충돌</b>을 특정하고 렌더 환경을 새로 세팅해 기한 내 최종본을 제출했습니다.</p>
+      </div>
+      <div class="pos reveal">
+        <h3>어디까지 되나요?</h3>
+        <p>컷 편집(Premiere) → 자막·모션(After Effects) → 3D 요소(Cinema 4D)까지
+          <b style="color:var(--ink)">혼자 마감</b>합니다. 스토리보드 기획 경험도 3개월 있습니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEQ 02 · WORK ============ -->
+<section class="pad" id="work" style="border-top:1px solid var(--line);">
+  <div class="wrap">
+    <div class="seq reveal">SEQ 02 — SELECTED WORK</div>
+    <h2 class="reveal">무엇을 만들었는지가 아니라,<br>어떻게 풀었는지</h2>
+    <p class="sec-desc reveal" style="margin-bottom:52px;">
+      결과물 아래에 요청 · 문제 · 판단 · 결과를 그대로 적었습니다.
+    </p>
+
+    <!-- CASE 01 -->
+    <article class="case">
+      <div class="case-top">
+        <div class="reveal">
+          <div class="case-id">CASE 01</div>
+          <h3 class="case-title">포스코 공사현장<br>안전교육 영상</h3>
+          <div class="case-role">
+            <span class="chip hot">단독 책임</span>
+            <span class="chip">20분 분량</span>
+            <span class="chip">Premiere Pro</span>
+            <span class="chip">After Effects</span>
+          </div>
+        </div>
+        <div class="reveal">
+          <div class="player">
+            <button class="facade" data-id="Odns3Lwi-1w" aria-label="포스코이앤씨 기업 콘텐츠 영상 재생">
+              <img src="https://i.ytimg.com/vi/Odns3Lwi-1w/hqdefault.jpg" alt="포스코이앤씨 기업 콘텐츠 영상 썸네일" loading="lazy" width="480" height="360">
+              <span class="play" aria-hidden="true"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="bpdr reveal">
+        <div class="step">
+          <div class="k"><i></i>BRIEF</div>
+          <p>공사현장 안전교육용 <b>20분 분량</b> 영상. 편집부터 최종본 제출까지 담당.</p>
+        </div>
+        <div class="step">
+          <div class="k"><i></i>PROBLEM</div>
+          <p>디자인팀이 준 자료만으로는 <b>교육 내용을 충분히 설명할 수 없었음.</b> 그대로 편집하면 "무엇을 조심해야 하는지"가 전달되지 않는 영상이 됨.</p>
+        </div>
+        <div class="step">
+          <div class="k"><i></i>DECISION</div>
+          <ul>
+            <li>디자인팀과 협의해 <b>추가 자료 확보</b></li>
+            <li>교육 흐름 기준으로 <b>스토리보드 재구성</b></li>
+            <li>중간 시안 공유 → 수정 요청 즉시 반영</li>
+            <li>렌더링 실패 → 로그 분석 → <b>플러그인 충돌</b> 특정 → 렌더 환경 재세팅</li>
+          </ul>
+        </div>
+        <div class="step r">
+          <div class="k"><i></i>RESULT</div>
+          <p>20분 최종본 <b>기한 내 납품.</b> 자료 보강과 스토리보드 재구성으로 교육 전달력을 끌어올렸고, 클라이언트 수정 요청도 지연 없이 반영했습니다.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- CASE 02 -->
+    <article class="case">
+      <div class="case-top">
+        <div class="reveal">
+          <div class="case-id">CASE 02</div>
+          <h3 class="case-title">VR 병원 소개 영상</h3>
+          <div class="case-role">
+            <span class="chip hot">사수 없음</span>
+            <span class="chip">미경험 포맷</span>
+            <span class="chip">1주일 완성</span>
+            <span class="chip">Premiere Pro</span>
+          </div>
+        </div>
+        <div class="reveal">
+          <div class="nomedia">
+            <div class="t">NO PUBLIC LINK</div>
+            <p class="d">클라이언트 납품물이라 공개 링크가 없습니다.
+              필요하시면 <a href="mailto:pms04270@naver.com">메일</a>로 개별 공유드리겠습니다.</p>
+          </div>
+        </div>
+      </div>
+      <div class="bpdr reveal">
+        <div class="step">
+          <div class="k"><i></i>BRIEF</div>
+          <p>입사 <b>첫날</b> PD 지시로 배정된 VR 콘텐츠 편집. 기한은 고정.</p>
+        </div>
+        <div class="step">
+          <div class="k"><i></i>PROBLEM</div>
+          <p>VR 편집은 <b>한 번도 다뤄본 적 없는 포맷</b>이었고, 물어볼 사수도 없는 상황.</p>
+        </div>
+        <div class="step">
+          <div class="k"><i></i>DECISION</div>
+          <ul>
+            <li>지인·커뮤니티·유튜브로 <b>Premiere VR 워크플로 독학</b></li>
+            <li>매일 진행분을 공유해 방향 이탈 리스크 차단</li>
+            <li>"막막해하기보다 부딪혀 본다"를 기본값으로</li>
+          </ul>
+        </div>
+        <div class="step r">
+          <div class="k"><i></i>RESULT</div>
+          <p><b>1주일 만에 1차본 완성 · 기한 준수.</b> 이후 교육 영상·숏폼 제작 속도가 함께 올라갔고, 한 달 뒤 <b>신규 인턴 리딩</b> 역할을 맡았습니다.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- CASE 03 -->
+    <article class="case">
+      <div class="case-top">
+        <div class="reveal">
+          <div class="case-id">CASE 03</div>
+          <h3 class="case-title">천재교육 수학 영상<br>스토리보드</h3>
+          <div class="case-role">
+            <span class="chip hot">퇴사 후 재의뢰</span>
+            <span class="chip">3개월 협업</span>
+            <span class="chip">기획 · 구성</span>
+          </div>
+          <p class="skill-use" style="margin-top:18px;">
+            편집자가 아니라 <b style="color:var(--ink)">영상의 뼈대를 설계하는 역할</b>로 참여한 프로젝트입니다.
+            퇴사한 사람에게 작가가 다시 일을 맡겼다는 사실이, 이 프로젝트의 가장 정확한 평가라고 생각합니다.
+          </p>
+        </div>
+        <div class="reveal">
+          <div class="nomedia">
+            <div class="t">NO PUBLIC LINK</div>
+            <p class="d">교육 콘텐츠 기획 산출물이라 공개 링크가 없습니다.
+              스토리보드 원본은 <a href="mailto:pms04270@naver.com">요청 시</a> 공유드립니다.</p>
+          </div>
+        </div>
+      </div>
+      <div class="bpdr reveal">
+        <div class="step">
+          <div class="k"><i></i>BRIEF</div>
+          <p>퇴사 후 협업 작가의 <b>재의뢰</b>로 진행한 3개월 스토리보드 작업.</p>
+        </div>
+        <div class="step">
+          <div class="k"><i></i>PROBLEM</div>
+          <p>스토리보드는 처음. <b>편집자 → 기획자</b>로 역할이 바뀌면서 생소한 부분이 많았음.</p>
+        </div>
+        <div class="step">
+          <div class="k"><i></i>DECISION</div>
+          <ul>
+            <li>모르는 건 <b>주저하지 않고 작가에게 질문</b>·가이드 요청</li>
+            <li>실무자 노하우를 빠르게 흡수해 이후 작업에 적용</li>
+          </ul>
+        </div>
+        <div class="step r">
+          <div class="k"><i></i>RESULT</div>
+          <p>3개월 <b>완주.</b> 편집을 넘어 콘텐츠의 흐름을 파악하는 <b>기획 역량</b>을 확보했습니다.</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ SEQ 03 · GALLERY ============ -->
+<section class="pad" style="border-top:1px solid var(--line); background:var(--panel);">
+  <div class="wrap">
+    <div class="seq reveal">SEQ 03 — MORE WORK</div>
+    <h2 class="reveal" style="margin-bottom:40px;">그 밖의 작업</h2>
+    <div class="gal">
+      <div class="reveal">
+        <div class="player">
+          <button class="facade" data-id="8rwn5j6TBUQ" aria-label="STEP 기업 콘텐츠 영상 재생">
+            <img src="https://i.ytimg.com/vi/8rwn5j6TBUQ/hqdefault.jpg" alt="STEP 기업 콘텐츠 영상 썸네일" loading="lazy" width="480" height="360">
+            <span class="play" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="gal-title">STEP 기업 콘텐츠 영상</div>
+        <div class="gal-desc">기업 소개 콘텐츠 편집 · Premiere Pro, After Effects</div>
+      </div>
+      <div class="reveal">
+        <div class="player">
+          <button class="facade" data-id="V_zIek_ELSo" aria-label="KBI 기업 콘텐츠 영상 재생">
+            <img src="https://i.ytimg.com/vi/V_zIek_ELSo/hqdefault.jpg" alt="KBI 기업 콘텐츠 영상 썸네일" loading="lazy" width="480" height="360">
+            <span class="play" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="gal-title">KBI 기업 콘텐츠 영상</div>
+        <div class="gal-desc">인터뷰·자막 구성 중심의 기업 콘텐츠 편집 · Premiere Pro</div>
+      </div>
+      <div class="reveal">
+        <div class="player">
+          <button class="facade" data-id="BB0tEUYVlbA" aria-label="아이폰 17 Pro 콘셉트 예고편 재생">
+            <img src="https://i.ytimg.com/vi/BB0tEUYVlbA/hqdefault.jpg" alt="아이폰 17 Pro 콘셉트 예고편 썸네일" loading="lazy" width="480" height="360">
+            <span class="play" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="gal-title">아이폰 17 Pro 콘셉트 예고편</div>
+        <div class="gal-desc">개인 작업 · 숏폼 포맷 티저 구성 · After Effects</div>
+      </div>
+      <div class="reveal">
+        <div class="player">
+          <button class="facade" data-id="gFPZGNdLp6A" aria-label="아이폰 17 Pro 광고 콘셉트 영상 재생">
+            <img src="https://i.ytimg.com/vi/gFPZGNdLp6A/hqdefault.jpg" alt="아이폰 17 Pro 광고 콘셉트 영상 썸네일" loading="lazy" width="480" height="360">
+            <span class="play" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="gal-title">아이폰 17 Pro 광고 콘셉트 영상</div>
+        <div class="gal-desc">개인 작업 · 색감·타이밍·전환을 반복 점검 · After Effects, Cinema 4D</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEQ 04 · SKILL ============ -->
+<section class="pad" id="skill" style="border-top:1px solid var(--line);">
+  <div class="wrap">
+    <div class="seq reveal">SEQ 04 — SKILL</div>
+    <h2 class="reveal">툴 이름이 아니라,<br>어디에 썼는지</h2>
+    <p class="sec-desc reveal" style="margin-bottom:34px;">실무에서 실제로 돌려본 순서대로 정리했습니다.</p>
+
+    <div class="skill-row reveal">
+      <div class="skill-tier">MAIN · 혼자 마감 가능</div>
+      <div>
+        <div class="skill-items">
+          <span class="tool">Premiere Pro</span>
+          <span class="tool">After Effects</span>
+        </div>
+        <p class="skill-use">20분 안전교육 영상 단독 편집, VR 콘텐츠 편집, 인턴 교육 영상 총괄에 사용.
+          컷 편집 · 자막 · 모션 · 렌더 트러블슈팅까지 커버합니다.</p>
+      </div>
+    </div>
+
+    <div class="skill-row reveal">
+      <div class="skill-tier b">SUB · 작업 가능</div>
+      <div>
+        <div class="skill-items">
+          <span class="tool">Cinema 4D</span>
+          <span class="tool">Photoshop</span>
+          <span class="tool">Illustrator</span>
+        </div>
+        <p class="skill-use">광고 스타일 모션그래픽의 3D 요소 제작, 그래픽 소스 제작 및 보정.
+          SBS아카데미 심화과정(8개월)에서 집중적으로 훈련했습니다.</p>
+      </div>
+    </div>
+
+    <div class="skill-row reveal">
+      <div class="skill-tier c">NOW · 학습 중</div>
+      <div>
+        <div class="skill-items">
+          <span class="tool">AI 영상 워크플로</span>
+          <span class="tool">디자인 자동화</span>
+        </div>
+        <p class="skill-use">서울시기술교육원 컴퓨터그래픽디자인과에서 AI 활용 제작 파이프라인을 학습 중(~2026.09).
+          기획 아이디에이션 · 소재 보정 · 업스케일링에 적용하고 있습니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEQ 05 · CAREER ============ -->
+<section class="pad" id="career" style="border-top:1px solid var(--line); background:var(--panel);">
+  <div class="wrap">
+    <div class="seq reveal">SEQ 05 — CAREER</div>
+    <h2 class="reveal" style="margin-bottom:40px;">공백까지 그대로 씁니다</h2>
+    <div class="tl">
+      <div class="tl-item now reveal">
+        <div class="tl-date">2026.02 — 2026.09 <span style="color:var(--render)">진행 중</span></div>
+        <div class="tl-title">서울시기술교육원 컴퓨터그래픽디자인과<small>재학</small></div>
+        <div class="tl-desc">AI 활용 능력과 디자인 역량을 동시에 강화하는 과정. 수료 즉시 투입 가능합니다.</div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-date">2024.12 — 2025.07</div>
+        <div class="tl-title">SBS아카데미컴퓨터아트학원<small>멀티미디어콘텐츠제작 심화</small></div>
+        <div class="tl-desc">After Effects · Premiere · Cinema 4D 심화. 실무에서 부족했던 표현력을 보완하기 위해 스스로 선택한 과정입니다.</div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-date">2024.03 — 2024.05 <span style="color:var(--amber)">재합류</span></div>
+        <div class="tl-title">코스믹블랙 주식회사<small>영상편집자 · 3개월</small></div>
+        <div class="tl-desc">인턴 시절 성실함을 좋게 봐주신 덕분에 다시 합류. 이 시기 이후 작가님의 요청으로 천재교육 스토리보드 협업으로 이어졌습니다.</div>
+      </div>
+      <div class="tl-item gap reveal">
+        <div class="tl-date">2023.12 — 2024.02</div>
+        <div class="tl-title">공백 · 3개월</div>
+        <div class="tl-desc">인턴 종료 후 포트폴리오 정비 및 재취업 준비 기간.</div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-date">2023.08 — 2023.11</div>
+        <div class="tl-title">코스믹블랙 주식회사<small>영상편집 인턴 · 4개월</small></div>
+        <div class="tl-desc">VR 병원 소개 영상 단독 편집, 포스코 안전교육 영상, 신규 인턴 리딩.</div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-date">2023.03 — 2023.06</div>
+        <div class="tl-title">브랜뉴디자인아카데미<small>모션그래픽 광고콘텐츠 제작</small></div>
+        <div class="tl-desc">영상 커리어의 출발점. <b style="color:var(--amber)">과목우수상</b> 수상 — 비전공 배경에서 3개월간의 습득 속도를 인정받았습니다.</div>
+      </div>
+      <div class="tl-item gap reveal">
+        <div class="tl-date">2021.01 — 2022.07</div>
+        <div class="tl-title">육군 병장 만기제대</div>
+        <div class="tl-desc">복무 중 모션그래픽 분야 도전을 결정하고 전역 직후 교육과정에 등록했습니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEQ 06 · HONEST ============ -->
+<section class="pad" id="honest" style="border-top:1px solid var(--line);">
+  <div class="wrap">
+    <div class="seq reveal">SEQ 06 — RETAKE</div>
+    <div class="honest reveal">
+      <h2 style="font-size:clamp(1.4rem,3vw,1.9rem);">가장 크게 실수했던 일과,<br>그 뒤에 바꾼 것</h2>
+      <p class="sec-desc" style="margin-top:14px;">
+        면접에서 물으실 것 같아 먼저 적습니다.
+      </p>
+      <div class="honest-grid">
+        <div class="honest-cell">
+          <div class="k">MISTAKE</div>
+          <p>클라이언트와의 소통이 부족한 상태로 작업을 진행하다 <b>작업 오류가 발생</b>했습니다.</p>
+        </div>
+        <div class="honest-cell">
+          <div class="k">LESSON</div>
+          <p>결과물이 아니라 <b>과정을 공유해야</b> 방향이 어긋나지 않는다는 것을 배웠습니다.</p>
+        </div>
+        <div class="honest-cell fix">
+          <div class="k">WHAT I CHANGED</div>
+          <p>이후 모든 작업에 <b>주기적 체크리스트</b>를 도입하고 <b>중간 시안 공유를 의무화</b>했습니다.
+            포스코 프로젝트에서 수정 요청을 지연 없이 반영할 수 있었던 건 이 습관 덕분입니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FACTS ============ -->
+<section class="pad" style="border-top:1px solid var(--line); background:var(--panel);">
+  <div class="wrap facts">
+    <div class="reveal">
+      <div class="fact-label">CERTIFICATE · AWARD</div>
+      <ul class="fact-list">
+        <!-- GTQ 취득 여부 확인 후 이력서와 함께 갱신할 것 -->
+        <li><span class="n">GTQ (그래픽기술자격) 1급</span><span class="m">2026.06 · 한국생산성본부</span></li>
+        <li><span class="n">GTQi (일러스트) 2급</span><span class="m">2026.06 · 한국생산성본부</span></li>
+        <li><span class="n">과목우수상</span><span class="m">2023 · 브랜뉴디자인아카데미</span></li>
+        <li><span class="n">전자기기기능사</span><span class="m">2019.07 · 한국산업인력공단</span></li>
+        <li><span class="n">2종 보통운전면허</span><span class="m">2022.10 · 경찰청</span></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <div class="fact-label">WORK CONDITION</div>
+      <ul class="fact-list">
+        <li><span class="n">지원 직무</span><span class="m">영상편집자 &gt; 영상제작</span></li>
+        <li><span class="n">지원 산업</span><span class="m">게임·애니메이션 &gt; 모션그래픽</span></li>
+        <li><span class="n">고용 형태</span><span class="m">정규직 / 프리랜서 / 인턴</span></li>
+        <li><span class="n">희망 근무지</span><span class="m">용산 · 강남 · 금천 · 성북</span></li>
+        <li><span class="n">병역</span><span class="m">육군 병장 만기제대</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section class="contact pad" id="contact">
+  <div class="wrap contact-inner">
+    <div class="seq reveal" style="justify-content:center;"><span style="flex:0">SEQ 07 — CONTACT</span></div>
+    <h2 class="reveal">한 편만 맡겨보셔도 됩니다.</h2>
+    <p class="reveal">
+      테스트 과제나 짧은 프리랜스 건이라도 좋습니다.<br>
+      결과물로 판단해 주시면 감사하겠습니다.
+    </p>
+    <div class="contact-cta reveal">
+      <a class="btn btn-fill" href="mailto:pms04270@naver.com?subject=%5B%EC%B1%84%EC%9A%A9%20%EB%AC%B8%EC%9D%98%5D%20%EC%98%81%EC%83%81%ED%8E%B8%EC%A7%91%EC%9E%90%20%EB%B0%95%EB%AF%BC%EC%84%9C">
+        pms04270@naver.com
+      </a>
+      <a class="btn btn-line" href="tel:01047942779">010-4794-2779</a>
+      <a class="btn btn-line" href="박민서_이력서.pdf" download>이력서 PDF</a>
+    </div>
+    <div class="social reveal">
+      <a href="https://www.youtube.com/@ParkFrame.Studio" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="4" stroke="currentColor" stroke-width="1.6"/><path d="M10.3 9.8v4.4l3.9-2.2-3.9-2.2z" fill="currentColor"/></svg>
+        <span>YouTube</span>
+      </a>
+      <a href="https://www.instagram.com/parkframe_01/" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.6"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor"/></svg>
+        <span>Instagram</span>
+      </a>
+      <a href="https://www.threads.com/@pms__0427__" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c-4.7 0-7.6 3-7.6 8.5s2.9 8.5 7.6 8.5c3.9 0 6.4-2 7-5.2.5-2.9-.6-5-3-5.6-1.9-.5-3.6 0-4.5 1.2-.6.8-.6 1.8.1 2.5.8.8 2.1.7 2.8-.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.8 9.4c-.3-1.6-1.4-2.6-3.2-2.6-2 0-3.4 1.2-3.4 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Threads</span>
+      </a>
+    </div>
+  </div>
+  <div class="wrap">
+    <footer>
+      <span>© 2026 ParkFrame — 박민서</span>
+      <span>SEOUL, KR · 서울 용산구</span>
+    </footer>
+  </div>
+</section>
+
+<script>
+  /* reveal */
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold:.12, rootMargin:'0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+  /* 안전망 — 관찰자가 어떤 이유로든 발화하지 않아도 콘텐츠는 반드시 보이게 */
+  setTimeout(function(){ document.querySelectorAll('.reveal:not(.in)').forEach(function(el){ el.classList.add('in'); }); }, 2500);
+
+  /* 플레이헤드 — 스크롤 진행 = 시퀀스 재생 */
+  var ph = document.getElementById('playhead'), tick = false;
+  function draw(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    ph.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+    tick = false;
+  }
+  window.addEventListener('scroll', function(){
+    if(!tick){ requestAnimationFrame(draw); tick = true; }
+  }, { passive:true });
+  draw();
+
+  /* YouTube 파사드 — 클릭 시에만 iframe 삽입 (LCP 개선) */
+  document.querySelectorAll('.facade').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.dataset.id;
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube.com/embed/' + id + '?autoplay=1&rel=0';
+      f.title = btn.getAttribute('aria-label') || 'video';
+      f.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
+      f.allowFullscreen = true;
+      btn.replaceWith(f);
+    });
+  });
+</script>
+</body>
+</html>

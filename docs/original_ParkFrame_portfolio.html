@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParkFrame — 영상편집자 박민서</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%238b5cf6' stroke-width='6' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M16 8 V56'/%3E%3Cpath d='M16 8 H40 V26 H16'/%3E%3Cpath d='M16 34 H44'/%3E%3Cpath d='M16 46 H36'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --ink:#1d1d1f;
+    --muted:#6e6e73;
+    --line:rgba(0,0,0,0.08);
+    --line-invert:rgba(255,255,255,0.22);
+    --bg:#ffffff;
+    --bg-soft:#f5f5f7;
+    --accent:#8b5cf6;
+    --accent-dim:#6d28d9;
+    --font:'Pretendard', sans-serif;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    font-family:var(--font);
+    color:var(--ink);
+    background:var(--bg);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+  }
+  a{ color:inherit; text-decoration:none; }
+  ::selection{ background:var(--accent); color:#fff; }
+
+  /* ---------- animated gradient background ---------- */
+  .gradient-bg{
+    position:fixed; inset:-12%;
+    z-index:-2;
+    overflow:hidden;
+    transition:transform 0.25s ease-out;
+    will-change:transform;
+  }
+  .gradient-layer{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 18% 22%, #a21caf 0%, transparent 42%),
+      radial-gradient(circle at 78% 12%, #4f46e5 0%, transparent 48%),
+      radial-gradient(circle at 62% 72%, #22d3ee 0%, transparent 52%),
+      radial-gradient(circle at 12% 82%, #3730a3 0%, transparent 50%),
+      linear-gradient(135deg, #1e1b4b, #082f49);
+    background-size:220% 220%;
+    animation:gradientDrift 30s ease-in-out infinite;
+    filter:saturate(1.15);
+  }
+  @keyframes gradientDrift{
+    0%{ background-position:0% 0%, 100% 0%, 50% 100%, 0% 100%, 0% 0%; }
+    50%{ background-position:100% 40%, 10% 90%, 90% 10%, 90% 30%, 100% 100%; }
+    100%{ background-position:0% 0%, 100% 0%, 50% 100%, 0% 100%, 0% 0%; }
+  }
+
+  section{ position:relative; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 32px; }
+  section.pad{ padding:140px 0; }
+  .transparent{ background:transparent; }
+  .light{ background:var(--bg); }
+  .soft{ background:var(--bg-soft); }
+
+  .reveal{ opacity:0; transform:translateY(26px); transition:opacity 0.9s ease, transform 0.9s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  .eyebrow{
+    display:inline-block;
+    font-size:0.78rem; font-weight:600; letter-spacing:0.02em;
+    color:var(--accent-dim);
+    background:rgba(139,92,246,0.1);
+    padding:7px 16px; border-radius:999px;
+    margin-bottom:26px;
+  }
+  .eyebrow.invert{ color:#fff; background:rgba(255,255,255,0.14); backdrop-filter:blur(6px); }
+
+  /* ---------- nav ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:30;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:16px 40px;
+    background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(20px) saturate(1.4);
+    -webkit-backdrop-filter:blur(20px) saturate(1.4);
+    border-bottom:1px solid var(--line);
+  }
+  .logo{ display:flex; align-items:center; gap:9px; font-weight:700; font-size:1rem; color:var(--ink); }
+  .logo-mark{ width:19px; height:19px; color:var(--accent); }
+  .logo em{ font-style:normal; color:var(--accent); }
+  nav{ display:flex; gap:30px; font-size:0.86rem; font-weight:500; color:var(--muted); }
+  nav a:hover{ color:var(--ink); }
+  @media (max-width:640px){ nav{ display:none; } }
+
+  /* ---------- hero ---------- */
+  .hero{
+    min-height:100svh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding:120px 32px 80px;
+  }
+  h1.title{
+    font-size:clamp(2.8rem, 8vw, 5.6rem);
+    font-weight:700;
+    line-height:1.08;
+    letter-spacing:-0.02em;
+    color:#fff;
+    text-shadow:0 2px 30px rgba(0,0,0,0.25);
+  }
+  h1.title .accent{ color:#fff; opacity:0.88; }
+  .hero-sub{
+    margin-top:26px;
+    max-width:560px;
+    font-size:1.18rem;
+    line-height:1.65;
+    font-weight:400;
+    color:rgba(255,255,255,0.86);
+  }
+  .hero-cta{
+    margin-top:44px;
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+  }
+  .btn{
+    padding:14px 30px;
+    border-radius:999px;
+    font-size:0.95rem; font-weight:600;
+    transition:transform 0.25s ease, opacity 0.25s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn-solid{ background:#fff; color:var(--ink); }
+  .btn-glass{ background:rgba(255,255,255,0.14); color:#fff; border:1px solid var(--line-invert); backdrop-filter:blur(6px); }
+  .hero-stats{
+    margin-top:70px;
+    display:flex; gap:52px; flex-wrap:wrap; justify-content:center;
+  }
+  .hero-stats div strong{ display:block; font-size:1.4rem; font-weight:700; color:#fff; }
+  .hero-stats div span{ font-size:0.82rem; color:rgba(255,255,255,0.72); }
+
+  /* ---------- section heading ---------- */
+  .sec-head{ text-align:center; max-width:640px; margin:0 auto 64px; }
+  h2.sec-title{
+    font-size:clamp(1.9rem, 4vw, 2.7rem);
+    font-weight:700; letter-spacing:-0.01em; line-height:1.15;
+  }
+  .sec-desc{ margin-top:14px; color:var(--muted); font-size:1.02rem; line-height:1.6; }
+
+  /* ---------- philosophy ---------- */
+  .philo-quote{
+    font-size:clamp(1.5rem, 3vw, 2.15rem);
+    font-weight:600; line-height:1.5; text-align:center; max-width:760px; margin:0 auto;
+  }
+  .philo-quote .accent{ color:var(--accent); }
+  .philo-body{
+    margin:34px auto 0; max-width:620px; text-align:center;
+    color:var(--muted); font-size:1rem; line-height:1.85; font-weight:400;
+  }
+
+  /* ---------- skills ---------- */
+  .skill-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; }
+  @media (max-width:900px){ .skill-grid{ grid-template-columns:repeat(2, 1fr); } }
+  @media (max-width:600px){ .skill-grid{ grid-template-columns:1fr; } }
+  .skill-card{
+    background:#fff; border:1px solid var(--line); border-radius:20px;
+    padding:30px 26px;
+    box-shadow:0 2px 24px rgba(0,0,0,0.04);
+    transition:transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .skill-card:hover{ transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.08); }
+  .skill-dot{ width:10px; height:10px; border-radius:50%; background:var(--accent); margin-bottom:18px; }
+  .skill-name{ font-size:1.12rem; font-weight:700; margin-bottom:8px; }
+  .skill-desc{ font-size:0.9rem; color:var(--muted); line-height:1.6; }
+
+  /* ---------- works ---------- */
+  .filmstrip{
+    display:flex; gap:22px;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    padding:6px 6px 26px;
+    cursor:grab;
+  }
+  .filmstrip::-webkit-scrollbar{ height:5px; }
+  .filmstrip::-webkit-scrollbar-thumb{ background:var(--line); border-radius:99px; }
+  .frame{
+    scroll-snap-align:start;
+    flex:0 0 auto;
+    width:min(80vw, 420px);
+    background:#fff;
+    border-radius:22px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    box-shadow:0 4px 30px rgba(0,0,0,0.05);
+  }
+  .frame-video{ position:relative; width:100%; aspect-ratio:16/9; background:#000; }
+  .frame-video iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .frame-body{ padding:24px 24px 28px; }
+  .frame-num{ font-size:0.74rem; font-weight:700; color:var(--accent); letter-spacing:0.04em; margin-bottom:8px; }
+  .frame-title{ font-size:1.15rem; font-weight:700; margin-bottom:8px; }
+  .frame-desc{ font-size:0.86rem; color:var(--muted); line-height:1.6; }
+  .frame-tools{ margin-top:16px; display:flex; gap:8px; flex-wrap:wrap; }
+  .tag{ font-size:0.72rem; font-weight:600; color:var(--ink); background:var(--bg-soft); padding:5px 12px; border-radius:999px; }
+
+  /* ---------- timeline ---------- */
+  .timeline{ position:relative; padding-left:28px; max-width:680px; margin:0 auto; }
+  .timeline::before{ content:''; position:absolute; left:0; top:6px; bottom:6px; width:1.5px; background:var(--line); }
+  .tl-item{ position:relative; padding-bottom:48px; }
+  .tl-item:last-child{ padding-bottom:0; }
+  .tl-item::before{
+    content:''; position:absolute; left:-33px; top:4px;
+    width:9px; height:9px; border-radius:50%; background:var(--accent);
+    box-shadow:0 0 0 4px var(--bg);
+  }
+  .tl-date{ font-size:0.78rem; font-weight:700; color:var(--accent-dim); margin-bottom:6px; }
+  .tl-title{ font-size:1.22rem; font-weight:700; margin-bottom:8px; }
+  .tl-desc{ color:var(--muted); font-size:0.92rem; line-height:1.7; }
+
+  /* ---------- edu / condition ---------- */
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:60px; max-width:900px; margin:0 auto; }
+  @media (max-width:760px){ .two-col{ grid-template-columns:1fr; } }
+  .plain-list{ list-style:none; }
+  .plain-list li{ padding:16px 0; border-bottom:1px solid var(--line); }
+  .plain-list li:first-child{ border-top:1px solid var(--line); }
+  .plain-row{ display:flex; justify-content:space-between; gap:16px; font-size:0.95rem; }
+  .plain-row .name{ font-weight:600; }
+  .plain-row .meta{ font-size:0.78rem; color:var(--muted); white-space:nowrap; }
+  .col-label{ font-size:0.78rem; font-weight:700; color:var(--accent-dim); margin-bottom:18px; }
+
+  /* ---------- contact ---------- */
+  .contact-panel{
+    max-width:640px; margin:0 auto;
+    text-align:center;
+    background:rgba(255,255,255,0.1);
+    border:1px solid var(--line-invert);
+    backdrop-filter:blur(14px);
+    border-radius:28px;
+    padding:70px 44px;
+  }
+  .contact-title{
+    font-size:clamp(2rem, 5vw, 3rem); font-weight:700; color:#fff; line-height:1.2;
+  }
+  .contact-title .accent{ color:#fff; opacity:0.85; }
+  .contact-links{ margin-top:34px; display:flex; gap:16px; flex-wrap:wrap; justify-content:center; }
+  .social-row{ margin-top:26px; display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+  .social-icon{
+    display:flex; align-items:center; gap:8px;
+    padding:11px 18px; border-radius:999px;
+    background:rgba(255,255,255,0.1);
+    border:1px solid var(--line-invert);
+    font-size:0.82rem; font-weight:600; color:#fff;
+    transition:background 0.3s ease, transform 0.3s ease;
+  }
+  .social-icon svg{ width:16px; height:16px; }
+  .social-icon:hover{ background:rgba(255,255,255,0.22); transform:translateY(-2px); }
+  .foot-bottom{
+    margin-top:56px; padding-top:24px; border-top:1px solid var(--line-invert);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    font-size:0.76rem; color:rgba(255,255,255,0.65);
+  }
+</style>
+</head>
+<body>
+
+  <div class="gradient-bg" id="gradientBg"><div class="gradient-layer"></div></div>
+
+  <header>
+    <div class="logo">
+      <svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter">
+          <path d="M16 8 V56"/>
+          <path d="M16 8 H40 V26 H16"/>
+          <path d="M16 34 H44"/>
+          <path d="M16 46 H36"/>
+        </g>
+      </svg>
+      <span>Park<em>Frame</em></span>
+    </div>
+    <nav>
+      <a href="#philosophy">소개</a>
+      <a href="#works">작업물</a>
+      <a href="#career">경력</a>
+      <a href="#contact">연락처</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero transparent">
+    <div class="eyebrow invert reveal">VIDEO EDITOR PORTFOLIO</div>
+    <h1 class="title reveal">완성도로 증명하는<br><span class="accent">영상편집자</span></h1>
+    <p class="hero-sub reveal">
+      영상편집자 박민서, ParkFrame입니다. 실무 경력 2년 11개월,
+      기획부터 촬영 보조·편집·모션그래픽까지 전 과정을 연결하는
+      올라운더 편집자입니다.
+    </p>
+    <div class="hero-cta reveal">
+      <a class="btn btn-solid" href="#works">작업물 보기</a>
+      <a class="btn btn-glass" href="#contact">연락하기</a>
+    </div>
+    <div class="hero-stats reveal">
+      <div><strong>2년 11개월</strong><span>실무 경력</span></div>
+      <div><strong>5+</strong><span>주요 프로젝트</span></div>
+      <div><strong>4종</strong><span>보유 자격증</span></div>
+    </div>
+  </section>
+
+  <!-- PHILOSOPHY -->
+  <section class="light pad" id="philosophy">
+    <div class="wrap">
+      <div class="philo-quote reveal">
+        강점은 <span class="accent">소통</span>, 꼼꼼함,
+        그리고 끝까지 해결하는 <span class="accent">끈기</span>입니다.
+      </div>
+      <div class="philo-body reveal">
+        사수 없이 VR 콘텐츠 편집을 단독으로 맡아 일주일 만에 완성했고,
+        포스코 안전교육 영상 제작 중 발생한 렌더링 오류를 직접 원인 분석해
+        해결한 경험이 있습니다. 클라이언트의 요구를 꼼꼼히 확인하고
+        시안을 공유하며 의견을 반영하는 과정을 통해 협업의 완성도를 높여왔습니다.
+        기획부터 편집까지 전 과정을 연결할 수 있는 올라운더 편집자를 지향합니다.
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section class="soft pad" id="skills">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 class="sec-title">Skill Set</h2>
+        <p class="sec-desc">편집·모션·그래픽 전 과정을 다루는 툴 스택입니다.</p>
+      </div>
+      <div class="skill-grid">
+        <div class="skill-card reveal">
+          <div class="skill-dot"></div>
+          <div class="skill-name">Premiere Pro</div>
+          <div class="skill-desc">정교한 컷 편집과 리듬감 있는 시퀀스 구성</div>
+        </div>
+        <div class="skill-card reveal">
+          <div class="skill-dot"></div>
+          <div class="skill-name">After Effects</div>
+          <div class="skill-desc">모션그래픽과 합성으로 완성도를 더합니다</div>
+        </div>
+        <div class="skill-card reveal">
+          <div class="skill-dot"></div>
+          <div class="skill-name">Cinema 4D</div>
+          <div class="skill-desc">3D 모션으로 입체적인 표현을 구현합니다</div>
+        </div>
+        <div class="skill-card reveal">
+          <div class="skill-dot"></div>
+          <div class="skill-name">Photoshop · Illustrator</div>
+          <div class="skill-desc">그래픽 소스 제작부터 보정까지 커버합니다</div>
+        </div>
+        <div class="skill-card reveal">
+          <div class="skill-dot"></div>
+          <div class="skill-name">AI 워크플로우</div>
+          <div class="skill-desc">기획·보정·업스케일링에 AI를 적극 활용합니다</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKS -->
+  <section class="light pad" id="works">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 class="sec-title">Selected Works</h2>
+        <p class="sec-desc">가로로 드래그하거나 스크롤해서 작업물을 확인하세요.</p>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="filmstrip" id="filmstrip">
+
+        <div class="frame reveal">
+          <div class="frame-video"><iframe src="https://www.youtube.com/embed/8rwn5j6TBUQ" title="VR 병원 소개 영상" allowfullscreen></iframe></div>
+          <div class="frame-body">
+            <div class="frame-num">WORK 01</div>
+            <div class="frame-title">VR 병원 소개 영상</div>
+            <div class="frame-desc">사수 없이 단독으로 맡은 첫 실무 프로젝트. 생소한 VR 콘텐츠 영역을 일주일 만에 학습해 완성했습니다.</div>
+            <div class="frame-tools"><span class="tag">Premiere Pro</span><span class="tag">After Effects</span></div>
+          </div>
+        </div>
+
+        <div class="frame reveal">
+          <div class="frame-video"><iframe src="https://www.youtube.com/embed/V_zIek_ELSo" title="포스코 안전교육 영상" allowfullscreen></iframe></div>
+          <div class="frame-body">
+            <div class="frame-num">WORK 02</div>
+            <div class="frame-title">포스코 공사현장 안전교육 영상</div>
+            <div class="frame-desc">20분 분량의 교육 영상, 편집부터 최종 제출까지 책임 진행. 렌더링 오류를 직접 추적해 해결했습니다.</div>
+            <div class="frame-tools"><span class="tag">Premiere Pro</span><span class="tag">After Effects</span></div>
+          </div>
+        </div>
+
+        <div class="frame reveal">
+          <div class="frame-video"><iframe src="https://www.youtube.com/embed/BB0tEUYVlbA" title="천재교육 수학 영상 스토리보드" allowfullscreen></iframe></div>
+          <div class="frame-body">
+            <div class="frame-num">WORK 03</div>
+            <div class="frame-title">천재교육 수학 영상 스토리보드</div>
+            <div class="frame-desc">협업 작가와 3개월간 진행. 편집을 넘어 영상의 구조를 설계하는 기획 역량을 확장한 프로젝트입니다.</div>
+            <div class="frame-tools"><span class="tag">Storyboard</span><span class="tag">기획</span></div>
+          </div>
+        </div>
+
+        <div class="frame reveal">
+          <div class="frame-video"><iframe src="https://www.youtube.com/embed/gFPZGNdLp6A" title="모션그래픽 광고 스타일" allowfullscreen></iframe></div>
+          <div class="frame-body">
+            <div class="frame-num">WORK 04</div>
+            <div class="frame-title">모션그래픽 광고 스타일 포트폴리오</div>
+            <div class="frame-desc">색감·타이밍·전환 효과를 수차례 점검해 완성도를 끌어올린 광고 스타일 모션그래픽 작업입니다.</div>
+            <div class="frame-tools"><span class="tag">After Effects</span><span class="tag">Cinema4D</span></div>
+          </div>
+        </div>
+
+        <div class="frame reveal">
+          <div class="frame-video"><iframe src="https://www.youtube.com/embed/Odns3Lwi-1w" title="인턴 교육 영상 총괄" allowfullscreen></iframe></div>
+          <div class="frame-body">
+            <div class="frame-num">WORK 05</div>
+            <div class="frame-title">신입 인턴 교육 영상 총괄</div>
+            <div class="frame-desc">인턴들을 이끌며 스토리보드 구성부터 최종 편집까지 전 과정을 리딩한 프로젝트입니다.</div>
+            <div class="frame-tools"><span class="tag">Premiere Pro</span><span class="tag">팀 리딩</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CAREER -->
+  <section class="soft pad" id="career">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 class="sec-title">Career</h2>
+        <p class="sec-desc">현장에서 쌓은 실무 경험과 성장의 타임라인입니다.</p>
+      </div>
+      <div class="timeline">
+        <div class="tl-item reveal">
+          <div class="tl-date">2026.02 — 2026.09</div>
+          <div class="tl-title">컴퓨터그래픽디자인 실무자 양성</div>
+          <div class="tl-desc">서울특별시 기술교육원(중부캠퍼스) · AI 활용 능력과 디자인 역량을 동시에 강화하는 과정</div>
+        </div>
+        <div class="tl-item reveal">
+          <div class="tl-date">2024.12 — 2025.07</div>
+          <div class="tl-title">멀티미디어콘텐츠제작 심화과정</div>
+          <div class="tl-desc">SBS아카데미컴퓨터아트학원 · 프리미어, 애프터이펙트, 시네마4D 심화 수강</div>
+        </div>
+        <div class="tl-item reveal">
+          <div class="tl-date">2023.08 — 2024.05</div>
+          <div class="tl-title">코스믹블랙 주식회사 · 영상편집팀</div>
+          <div class="tl-desc">주요직무 영상편집자 · 포스코 안전교육 영상, VR 콘텐츠 편집 등 실무 10개월</div>
+        </div>
+        <div class="tl-item reveal">
+          <div class="tl-date">2023.03 — 2023.06</div>
+          <div class="tl-title">모션그래픽 광고콘텐츠 제작 과정</div>
+          <div class="tl-desc">브랜뉴디자인아카데미 · 과목우수상 수상 (전공자 아닌 배경에서 빠른 습득력 인정)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDUCATION / CONDITION -->
+  <section class="light pad">
+    <div class="wrap two-col">
+      <div class="reveal">
+        <div class="col-label">CERTIFICATE</div>
+        <ul class="plain-list">
+          <li class="plain-row"><span class="name">GTQ (그래픽기술자격) 1급</span><span class="meta">2026.06 · 한국생산성본부</span></li>
+          <li class="plain-row"><span class="name">GTQi (일러스트) 2급</span><span class="meta">2026.06 · 한국생산성본부</span></li>
+          <li class="plain-row"><span class="name">전자기능사</span><span class="meta">2019.07 · 한국산업인력공단</span></li>
+          <li class="plain-row"><span class="name">2종 보통운전면허</span><span class="meta">2022.10 · 경찰청</span></li>
+        </ul>
+      </div>
+      <div class="reveal">
+        <div class="col-label">CONDITION</div>
+        <ul class="plain-list">
+          <li class="plain-row"><span class="name">희망 근무지</span><span class="meta">용산 · 강남 · 금천</span></li>
+          <li class="plain-row"><span class="name">고용 형태</span><span class="meta">정규직 / 프리랜서</span></li>
+          <li class="plain-row"><span class="name">병역사항</span><span class="meta">육군 병장 만기제대</span></li>
+          <li class="plain-row"><span class="name">지원 직무</span><span class="meta">영상편집 · 모션그래픽</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="transparent pad" id="contact">
+    <div class="wrap">
+      <div class="contact-panel reveal">
+        <div class="contact-title">채용 담당자님께<br><span class="accent">연락</span> 부탁드립니다</div>
+        <div class="contact-links">
+          <a class="btn btn-solid" href="mailto:pms04270@naver.com">pms04270@naver.com</a>
+          <a class="btn btn-glass" href="tel:010-4794-2779">010-4794-2779</a>
+        </div>
+        <div class="social-row">
+          <a class="social-icon" href="https://www.instagram.com/parkframe_01/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2.5" y="2.5" width="19" height="19" rx="5" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor"/>
+            </svg>
+            <span>Instagram</span>
+          </a>
+          <a class="social-icon" href="https://www.threads.com/@pms__0427__" target="_blank" rel="noopener noreferrer" aria-label="Threads">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 3.5c-4.7 0-7.6 3-7.6 8.5s2.9 8.5 7.6 8.5c3.9 0 6.4-2 7-5.2.5-2.9-.6-5-3-5.6-1.9-.5-3.6 0-4.5 1.2-.6.8-.6 1.8.1 2.5.8.8 2.1.7 2.8-.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M13.8 9.4c-.3-1.6-1.4-2.6-3.2-2.6-2 0-3.4 1.2-3.4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span>Threads</span>
+          </a>
+          <a class="social-icon" href="https://www.youtube.com/@ParkFrame.Studio" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2.5" y="6" width="19" height="12" rx="4" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M10.3 9.8v4.4l3.9-2.2-3.9-2.2z" fill="currentColor"/>
+            </svg>
+            <span>YouTube</span>
+          </a>
+        </div>
+        <div class="foot-bottom">
+          <span>© 2026 ParkFrame — 박민서</span>
+          <span>Seoul, Korea</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold:0.15 });
+  revealEls.forEach(el=>io.observe(el));
+
+  const gradientBg = document.getElementById('gradientBg');
+  let ticking = false;
+  window.addEventListener('scroll', ()=>{
+    if(!ticking){
+      requestAnimationFrame(()=>{
+        const y = window.scrollY;
+        gradientBg.style.transform = `translateY(${y * 0.12}px) rotate(${y * 0.006}deg) scale(1.03)`;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive:true });
+
+  const strip = document.getElementById('filmstrip');
+  let isDown=false, startX, scrollLeft;
+  strip.addEventListener('mousedown',(e)=>{
+    isDown=true; strip.style.cursor='grabbing';
+    startX = e.pageX - strip.offsetLeft;
+    scrollLeft = strip.scrollLeft;
+  });
+  ['mouseleave','mouseup'].forEach(evt=>strip.addEventListener(evt,()=>{ isDown=false; strip.style.cursor='grab'; }));
+  strip.addEventListener('mousemove',(e)=>{
+    if(!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - strip.offsetLeft;
+    strip.scrollLeft = scrollLeft - (x - startX)*1.2;
+  });
+</script>
+
+</body>
+</html>
